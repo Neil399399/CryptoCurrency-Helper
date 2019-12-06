@@ -1,5 +1,6 @@
-package btc
+package bitcoin
 
+// VoutDetail is bitcoin transaction detail
 type VoutDetail struct {
 	BlockHash     string
 	Txid          string
@@ -13,6 +14,7 @@ type VoutDetail struct {
 	Blocktime     int64
 }
 
+// Utxo is bitcoin Unspent Transaction Output
 type Utxo struct {
 	Address     string
 	TxID        string

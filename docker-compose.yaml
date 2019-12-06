@@ -1,0 +1,20 @@
+version: '1'
+
+networks:
+  local:
+
+volumes:
+  bitcoin-testnet:
+
+services:
+    bitcoin-testnet:
+        image: kylemanna/bitcoind
+        container_name: bitcoin-testnet
+        ports:
+          - 18332:18332
+          - 18333:18333
+        networks:
+          - local
+        volumes:
+          - bitcoin-testnet:/bitcoin
+        command: btc_oneshot --testnet -rpcallowip=0.0.0.0/0 -rpcbind=0.0.0.0 -rpcport=18332 -txindex=1

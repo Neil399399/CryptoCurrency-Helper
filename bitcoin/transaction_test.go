@@ -1,10 +1,9 @@
-package btc
+package bitcoin
 
 import (
-	"fmt"
 	"testing"
 
-	_ "github.com/btcsuite/btcwallet/walletdb/bdb"
+	"github.com/Neil399399/bitcoin-helper/vault"
 )
 
 const toAddr = "munZ5L7fE8Hmiqvc2f3ze9Wo1TjBXfACxR"
@@ -13,35 +12,9 @@ const publicKey = "o1qS7m37GJp8JB19nbTgWtoWxr9X7QYMc8Zjs5jYVYsA"
 const txid = "c66e89bbab9675622e1156dbe98d8b9a3718f9b6b9bbeef6a04ce96dad1d1afd"
 const txFee = 10000
 
-func TestGetBalance(t *testing.T) {
-	// publicKeyB := base58.Decode(publicKey)
-
-	// dbPath := filepath.Join(os.TempDir(), "example.db")
-	// fmt.Println("dbPath", dbPath)
-	// db, err := walletdb.Create("bdb", dbPath)
-	// if err != nil {
-	// 	fmt.Println("Create")
-	// 	panic(err)
-	// }
-	// defer os.Remove(dbPath)
-	// defer db.Close()
-
-	// w, err := wallet.Open(db, publicKeyB, nil, &chaincfg.TestNet3Params, 1)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// fmt.Println(w.ChainParams())
-	btcTx := NewBtcClient()
-	resp, err := btcTx.ListenBitcoinChain(toAddr, 1611501)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(resp)
-}
-
 func TestSendTransaction(t *testing.T) {
 	btcTx := NewBtcClient()
-	vault := NewVaultClient("http://localhost:8200", "root")
+	vault := vault.NewVaultClient("http://localhost:8200", "root")
 
 	btcTx.txFee = txFee
 	btcTx.vaultClient = *vault

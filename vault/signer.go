@@ -1,4 +1,4 @@
-package btc
+package vault
 
 import (
 	"fmt"
@@ -14,6 +14,7 @@ func NewVaultClient(vaultURL, vaultToken string) *Vault {
 	//create the client
 	vaultConfig := api.DefaultConfig()
 	vaultConfig.Address = vaultURL
+
 	// new client
 	Client, err := api.NewClient(vaultConfig)
 	if err != nil {

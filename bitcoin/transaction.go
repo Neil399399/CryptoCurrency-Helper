@@ -1,9 +1,10 @@
-package btc
+package bitcoin
 
 import (
 	"errors"
 	"fmt"
 
+	"github.com/Neil399399/bitcoin-helper/vault"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/rpcclient"
@@ -13,13 +14,15 @@ import (
 	"github.com/btcsuite/btcutil/base58"
 )
 
-type BTCTx struct {
+// BtcTx is bttcoin transaction repo
+type BtcTx struct {
 	client      *rpcclient.Client
 	txFee       int64
-	vaultClient Vault
+	vaultClient vault.Vault
 }
 
-func NewBtcClient() *BTCTx {
+// NewBtcClient new the rpc client
+func NewBtcClient() *BtcTx {
 	connCfg := &rpcclient.ConnConfig{
 		Host:         "epona:18332",
 		User:         "bitcoinrpc",
@@ -32,7 +35,7 @@ func NewBtcClient() *BTCTx {
 	if err != nil {
 		panic("panic so sad")
 	}
-	return &BTCTx{
+	return &BtcTx{
 		client: client,
 	}
 }
@@ -45,7 +48,7 @@ func convertPublicToAddress(btcPublicKey string) (string, error) {
 	return addrPub.EncodeAddress(), nil
 }
 
-func (t *BTCTx) getOutputIndex(txid string, addr string) (int64, uint32, error) {
+func (t *BtcTx) getOutputIndex(txid string, addr string) (int64, uint32, error) {
 	txHash, err := chainhash.NewHashFromStr(txid)
 	if err != nil {
 		return 0, 0, err
@@ -71,7 +74,8 @@ func getPayToAddrScript(address string) []byte {
 	return rcvScript
 }
 
-func (t *BTCTx) CreateTransaction(txid string, fromAddr string, toAddr string, amount int64) (*wire.MsgTx, Utxo, error) {
+// CreateTransaction create a new bitcoin transaction (testnet)
+func (t *BtcTx) CreateTransaction(txid string, fromAddr string, toAddr string, amount int64) (*wire.MsgTx, Utxo, error) {
 	unspentAmount, outputIndex, err := t.getOutputIndex(txid, fromAddr)
 	if err != nil {
 		return nil, Utxo{}, err
@@ -111,7 +115,8 @@ func (t *BTCTx) CreateTransaction(txid string, fromAddr string, toAddr string, a
 	return redemTx, unspentTx, nil
 }
 
-func (t *BTCTx) SignTransaction(tx *wire.MsgTx, unspentTx Utxo) (*wire.MsgTx, error) {
+// SignTransaction sign the transdaction with vault
+func (t *BtcTx) SignTransaction(tx *wire.MsgTx, unspentTx Utxo) (*wire.MsgTx, error) {
 	// hash transaction
 	hash, err := txscript.CalcSignatureHash(unspentTx.Script, txscript.SigHashAll, tx, 0)
 	if err != nil {
@@ -140,8 +145,8 @@ func (t *BTCTx) SignTransaction(tx *wire.MsgTx, unspentTx Utxo) (*wire.MsgTx, er
 	return tx, nil
 }
 
-// validate signature
-func (t *BTCTx) ValidateTranscation(tx *wire.MsgTx, unspentTx Utxo) error {
+// ValidateTranscation check the transaction is valid
+func (t *BtcTx) ValidateTranscation(tx *wire.MsgTx, unspentTx Utxo) error {
 	flags := txscript.StandardVerifyFlags
 	vm, err := txscript.NewEngine(unspentTx.Script, tx, 0, flags, nil, nil, unspentTx.Satoshis) // Set to 0 because we only have one input
 	if err != nil {
@@ -154,8 +159,8 @@ func (t *BTCTx) ValidateTranscation(tx *wire.MsgTx, unspentTx Utxo) error {
 	return nil
 }
 
-// send transaction
-func (t *BTCTx) SendTransaction(tx *wire.MsgTx) (*chainhash.Hash, error) {
+// SendTransaction send the transaction to bitcoin chain
+func (t *BtcTx) SendTransaction(tx *wire.MsgTx) (*chainhash.Hash, error) {
 	txhash, err := t.client.SendRawTransaction(tx, true)
 	if err != nil {
 		return nil, err
@@ -163,21 +168,9 @@ func (t *BTCTx) SendTransaction(tx *wire.MsgTx) (*chainhash.Hash, error) {
 	return txhash, nil
 }
 
-type VoutDetail2 struct {
-	BlockHash     string
-	Txid          string
-	Address       string
-	Category      string
-	Amount        float64
-	Vout          uint32
-	Confirmations uint64
-	Time          int64
-	LockTime      uint32
-	Blocktime     int64
-}
-
-func (t *BTCTx) ListenBitcoinChain(addr string, endBlockHeight int64) (*[]VoutDetail2, error) {
-	result := []VoutDetail2{}
+// ListenBitcoinChain get input address transcation from block
+func (t *BtcTx) ListenBitcoinChain(addr string, endBlockHeight int64) (*[]VoutDetail, error) {
+	result := []VoutDetail{}
 	currentBlockHeight, err := t.client.GetBlockCount()
 	if err != nil {
 		return nil, err
@@ -224,10 +217,10 @@ func (t *BTCTx) ListenBitcoinChain(addr string, endBlockHeight int64) (*[]VoutDe
 
 			for _, out := range txRawResult.Vout {
 				if len(out.ScriptPubKey.Addresses) > 0 && addr == out.ScriptPubKey.Addresses[0] {
-					voutDetail := VoutDetail2{
+					voutDetail := VoutDetail{
 						BlockHash:     txRawResult.BlockHash,
 						Txid:          txRawResult.Txid,
-						Address:       addr,
+						Address:       []string{addr},
 						Category:      "receive",
 						Amount:        out.Value,
 						Vout:          out.N,
