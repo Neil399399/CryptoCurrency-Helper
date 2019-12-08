@@ -1,6 +1,7 @@
 package bitcoin
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/Neil399399/bitcoin-helper/vault"
@@ -21,22 +22,22 @@ func TestSendTransaction(t *testing.T) {
 
 	msgTx, unspentTx, err := btcTx.CreateTransaction(txid, fromAddr, toAddr, int64(10000))
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
 	signedTx, err := btcTx.SignTransaction(msgTx, unspentTx)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
 	err = btcTx.ValidateTranscation(signedTx, unspentTx)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
-	// txhash, err := btcTx.SendTransaction(signedTx)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// fmt.Println("TXHASH", txhash)
+	txhash, err := btcTx.SendTransaction(signedTx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println("TXHASH", txhash)
 }
