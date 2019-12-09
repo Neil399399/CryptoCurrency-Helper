@@ -2,6 +2,7 @@ package bitcoin
 
 // VoutDetail is bitcoin transaction detail
 type VoutDetail struct {
+	BlockNumber   int64
 	BlockHash     string
 	Txid          string
 	Address       []string

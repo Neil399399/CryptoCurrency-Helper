@@ -7,7 +7,7 @@ import (
 
 var testAddressBook = []string{"munZ5L7fE8Hmiqvc2f3ze9Wo1TjBXfACxR", "mvN8gFRPEwwt8XBpwr7gkFgDCPNMhtNyXA"}
 
-const nowBlockNumber = 1611757
+const nowBlockNumber = 1611901
 
 func TestBlockListener(t *testing.T) {
 	btcTx := NewBtcClient()

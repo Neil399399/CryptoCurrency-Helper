@@ -31,16 +31,18 @@ func NewVaultClient(vaultURL, vaultToken string) *Vault {
 func (v *Vault) Sign(keyID, cointype, network, childIdx, message string) (string, string, error) {
 	// vault path and request
 	vaultSignPath := fmt.Sprintf("aetheras-plugin/signer/%s/%s", cointype, keyID)
-	btcData := map[string]interface{}{
+	sendReq := map[string]interface{}{
 		"cointype": cointype,
 		"keyID":    keyID,
-		"network":  network,
 		"childIdx": childIdx,
 		"value":    message,
 	}
+	if cointype == "btc" {
+		sendReq["network"] = message
+	}
 
 	// response
-	resp, err := v.client.Logical().Write(vaultSignPath, btcData)
+	resp, err := v.client.Logical().Write(vaultSignPath, sendReq)
 	if err != nil {
 		return "", "", err
 	}

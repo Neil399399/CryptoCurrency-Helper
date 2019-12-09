@@ -72,42 +72,46 @@ func getPayToAddrScript(address string) []byte {
 }
 
 // CreateTransaction create a new bitcoin transaction (testnet)
-func (t *BtcTx) CreateTransaction(txid string, fromAddr string, toAddr string, amount int64) (*wire.MsgTx, Utxo, error) {
-	unspentAmount, outputIndex, err := t.getOutputIndex(txid, fromAddr)
-	if err != nil {
-		return nil, Utxo{}, err
-	}
-	unspentTx := Utxo{
-		Address:     fromAddr,
-		TxID:        txid,
-		OutputIndex: outputIndex,
-		Script:      getPayToAddrScript(fromAddr),
-		Satoshis:    amount, // the amount we want to send
-	}
+func (t *BtcTx) CreateTransaction(txids []string, fromAddr string, toAddr string, amount int64) (*wire.MsgTx, Utxo, error) {
+	var redemTx *wire.MsgTx
+	var unspentTx Utxo
+	for _, txid := range txids {
+		unspentAmount, outputIndex, err := t.getOutputIndex(txid, fromAddr)
+		if err != nil {
+			return nil, Utxo{}, err
+		}
+		unspentTx = Utxo{
+			Address:     fromAddr,
+			TxID:        txid,
+			OutputIndex: outputIndex,
+			Script:      getPayToAddrScript(fromAddr),
+			Satoshis:    amount, // the amount we want to send
+		}
 
-	hash, err := chainhash.NewHashFromStr(unspentTx.TxID)
-	if err != nil {
-		return nil, Utxo{}, err
-	}
+		hash, err := chainhash.NewHashFromStr(unspentTx.TxID)
+		if err != nil {
+			return nil, Utxo{}, err
+		}
 
-	// Creste raw tx
-	redemTx := wire.NewMsgTx(wire.TxVersion)
-	outPoint := wire.NewOutPoint(hash, unspentTx.OutputIndex)
-	txIn := wire.NewTxIn(outPoint, nil, nil)
-	redemTx.AddTxIn(txIn)
+		// Creste raw tx
+		redemTx = wire.NewMsgTx(wire.TxVersion)
+		outPoint := wire.NewOutPoint(hash, unspentTx.OutputIndex)
+		txIn := wire.NewTxIn(outPoint, nil, nil)
+		redemTx.AddTxIn(txIn)
 
-	// Create TxOut
-	rcvScript := getPayToAddrScript(toAddr)
-	outCoin := unspentTx.Satoshis
-	txOut := wire.NewTxOut(outCoin, rcvScript)
-	redemTx.AddTxOut(txOut)
+		// Create TxOut
+		rcvScript := getPayToAddrScript(toAddr)
+		outCoin := unspentTx.Satoshis
+		txOut := wire.NewTxOut(outCoin, rcvScript)
+		redemTx.AddTxOut(txOut)
 
-	// If the above TxOut leads to change, let the change flow back to sneder
-	change := unspentAmount - unspentTx.Satoshis - t.txFee
-	if change > 0 {
-		changeScript := getPayToAddrScript(fromAddr)
-		changeTxOut := wire.NewTxOut(change, changeScript)
-		redemTx.AddTxOut(changeTxOut)
+		// If the above TxOut leads to change, let the change flow back to sneder
+		change := unspentAmount - unspentTx.Satoshis - t.txFee
+		if change > 0 {
+			changeScript := getPayToAddrScript(fromAddr)
+			changeTxOut := wire.NewTxOut(change, changeScript)
+			redemTx.AddTxOut(changeTxOut)
+		}
 	}
 	return redemTx, unspentTx, nil
 }

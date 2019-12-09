@@ -52,6 +52,7 @@ func (t *BtcTx) ListenBitcoinChain(addressBook []string, endBlockHeight int64) (
 				for _, addr := range addressBook {
 					if len(out.ScriptPubKey.Addresses) > 0 && addr == out.ScriptPubKey.Addresses[0] {
 						voutDetail := VoutDetail{
+							BlockNumber:   currentBlockHeight,
 							BlockHash:     txRawResult.BlockHash,
 							Txid:          txRawResult.Txid,
 							Address:       []string{addr},
@@ -78,6 +79,7 @@ func (t *BtcTx) ListenBitcoinChain(addressBook []string, endBlockHeight int64) (
 		if err != nil {
 			return nil, err
 		}
+		currentBlockHeight = currentBlockHeight - 1
 	}
 	return result, nil
 }

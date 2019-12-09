@@ -10,8 +10,11 @@ import (
 const toAddr = "munZ5L7fE8Hmiqvc2f3ze9Wo1TjBXfACxR"
 const fromAddr = "mvN8gFRPEwwt8XBpwr7gkFgDCPNMhtNyXA"
 const publicKey = "o1qS7m37GJp8JB19nbTgWtoWxr9X7QYMc8Zjs5jYVYsA"
-const txid = "c66e89bbab9675622e1156dbe98d8b9a3718f9b6b9bbeef6a04ce96dad1d1afd"
 const txFee = 10000
+
+var txids = []string{
+	"9bcdc1c03e4a723ccdf69ffb674325a966bb28ba6035f6bb4a817ea558e21357",
+}
 
 func TestSendTransaction(t *testing.T) {
 	btcTx := NewBtcClient()
@@ -20,7 +23,7 @@ func TestSendTransaction(t *testing.T) {
 	btcTx.txFee = txFee
 	btcTx.vaultClient = *vault
 
-	msgTx, unspentTx, err := btcTx.CreateTransaction(txid, fromAddr, toAddr, int64(10000))
+	msgTx, unspentTx, err := btcTx.CreateTransaction(txids, fromAddr, toAddr, int64(10000))
 	if err != nil {
 		t.Fatal(err)
 	}
