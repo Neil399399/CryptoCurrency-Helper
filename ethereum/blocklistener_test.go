@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-const nowBlock = 5582755
+const nowBlock = 5581555
 
 var addressBook = []string{
 	"0x1Ed2001e00Da365b0b589f5f15507982235B30D5",

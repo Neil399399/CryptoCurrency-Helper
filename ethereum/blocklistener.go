@@ -47,14 +47,14 @@ func (e *EthTx) BlockListener(addressBook []string, endBlockHeight int64) (map[s
 					return nil, err
 				}
 				for _, address := range addressBook {
-					if address == sender.Hex() {
-						// check target not the contract address.
-						if txn.To() != nil {
+					if to := txn.To(); to != nil {
+						if address == txn.To().Hex() {
+							// check target not the contract address.
 							event := TxDetail{}
 							event.from = sender.Hex()
-							event.to = txn.To().Hex()
+							event.to = to.Hex()
 							event.txnHash = txn.Hash().Hex()
-							event.symbol = "ETH"
+							event.symbol = "wei"
 							event.value = txn.Value().Uint64()
 							event.blockNumber = block.Number().Uint64()
 							event.timeStamp = strconv.FormatUint(block.Time(), 10)
