@@ -15,7 +15,7 @@ import (
 type EthTx struct {
 	client       *ethclient.Client
 	blockRange   int64
-	gasLimit     uint64
+	gasLimit     int64
 	contractAddr string
 	vaultClient  vault.Vault
 }
@@ -50,28 +50,32 @@ func (e *EthTx) CreateTransaction(ctx context.Context, ERC20 bool, fromAddress, 
 	valueBN := big.NewInt(value)
 	wei := big.NewInt(10)
 	demon := wei.Exp(wei, big.NewInt(18), nil)
+	valueBN.Mul(valueBN, demon)
 
-	valueBN = valueBN.Mul(valueBN, demon)
 	gasLimit := e.gasLimit
+	fee := big.NewInt(0)
+	fee.Mul(gasPrice, big.NewInt(gasLimit))
 
 	if ERC20 {
+		amount := big.NewInt(value)
 		tokenAddress := common.HexToAddress(e.contractAddr)
+
 		transferFnSignature := []byte("transfer(address,uint256)")
 		hash := sha3.NewLegacyKeccak256()
 		hash.Write(transferFnSignature)
 		methodID := hash.Sum(nil)[:4]
 		paddedAddress := common.LeftPadBytes(targetAddr.Bytes(), 32)
-		paddedAmount := common.LeftPadBytes(valueBN.Bytes(), 32)
+		paddedAmount := common.LeftPadBytes(amount.Bytes(), 32)
 		// save to byte array.
 		var data []byte
 		data = append(data, methodID...)
 		data = append(data, paddedAddress...)
 		data = append(data, paddedAmount...)
-		newTxn = types.NewTransaction(nonce, tokenAddress, big.NewInt(0), gasLimit, gasPrice, data)
-	} else {
-		newTxn = types.NewTransaction(nonce, targetAddr, valueBN, gasLimit, gasPrice, nil)
-	}
 
+		newTxn = types.NewTransaction(nonce, tokenAddress, big.NewInt(0), uint64(gasLimit), gasPrice, data)
+	} else {
+		newTxn = types.NewTransaction(72, targetAddr, valueBN, uint64(gasLimit), gasPrice, nil)
+	}
 	return newTxn, nil
 }
 
@@ -81,7 +85,7 @@ func (e *EthTx) SignTransaction(ctx context.Context, tx *types.Transaction) (*ty
 		return nil, err
 	}
 	hash := types.NewEIP155Signer(chainID).Hash(tx)
-	respSig, _, err := e.vaultClient.Sign("aetheras_eth_3", "eth", "", "1", base58.Encode(hash.Bytes()))
+	respSig, _, err := e.vaultClient.Sign("aetheras_eth_4", "eth", "", "70", base58.Encode(hash.Bytes()))
 	if err != nil {
 		return nil, err
 	}

@@ -74,12 +74,16 @@ func getPayToAddrScript(address string) []byte {
 // CreateTransaction create a new bitcoin transaction (testnet)
 func (t *BtcTx) CreateTransaction(txids []string, fromAddr string, toAddr string, amount int64) (*wire.MsgTx, Utxo, error) {
 	var redemTx *wire.MsgTx
+	redemTx = wire.NewMsgTx(wire.TxVersion)
 	var unspentTx Utxo
+	var total int64
+	amount = amount - t.txFee
 	for _, txid := range txids {
 		unspentAmount, outputIndex, err := t.getOutputIndex(txid, fromAddr)
 		if err != nil {
 			return nil, Utxo{}, err
 		}
+		total = total + unspentAmount
 		unspentTx = Utxo{
 			Address:     fromAddr,
 			TxID:        txid,
@@ -94,55 +98,56 @@ func (t *BtcTx) CreateTransaction(txids []string, fromAddr string, toAddr string
 		}
 
 		// Creste raw tx
-		redemTx = wire.NewMsgTx(wire.TxVersion)
 		outPoint := wire.NewOutPoint(hash, unspentTx.OutputIndex)
 		txIn := wire.NewTxIn(outPoint, nil, nil)
 		redemTx.AddTxIn(txIn)
-
-		// Create TxOut
-		rcvScript := getPayToAddrScript(toAddr)
-		outCoin := unspentTx.Satoshis
-		txOut := wire.NewTxOut(outCoin, rcvScript)
-		redemTx.AddTxOut(txOut)
-
-		// If the above TxOut leads to change, let the change flow back to sneder
-		change := unspentAmount - unspentTx.Satoshis - t.txFee
-		if change > 0 {
-			changeScript := getPayToAddrScript(fromAddr)
-			changeTxOut := wire.NewTxOut(change, changeScript)
-			redemTx.AddTxOut(changeTxOut)
-		}
 	}
+	// Create TxOut
+	rcvScript := getPayToAddrScript(toAddr)
+	outCoin := unspentTx.Satoshis
+	txOut := wire.NewTxOut(outCoin, rcvScript)
+	redemTx.AddTxOut(txOut)
+
+	// If the above TxOut leads to change, let the change flow back to sneder
+	change := total - unspentTx.Satoshis - t.txFee
+	if change > 0 {
+		changeScript := getPayToAddrScript(fromAddr)
+		changeTxOut := wire.NewTxOut(change, changeScript)
+		redemTx.AddTxOut(changeTxOut)
+	}
+
 	return redemTx, unspentTx, nil
 }
 
 // SignTransaction sign the transdaction with vault
 func (t *BtcTx) SignTransaction(tx *wire.MsgTx, unspentTx Utxo) (*wire.MsgTx, error) {
-	// hash transaction
-	hash, err := txscript.CalcSignatureHash(unspentTx.Script, txscript.SigHashAll, tx, 0)
-	if err != nil {
-		return nil, err
+	for i := 0; i < len(tx.TxIn); i++ {
+
+		// hash transaction
+		hash, err := txscript.CalcSignatureHash(unspentTx.Script, txscript.SigHashAll, tx, i)
+		if err != nil {
+			return nil, err
+		}
+		// call vault to sign tx
+		respSig, respPK, err := t.vaultClient.Sign("aetheras_btc_3", "btc", "testnet", "1", base58.Encode(hash))
+		if err != nil {
+			return nil, err
+		}
+
+		// getresponse and convert to bytes
+		sigB := base58.Decode(respSig)
+		pkB := base58.Decode(respPK)
+
+		// add sign hash
+		sigB = append(sigB, byte(txscript.SigHashAll))
+
+		// combine sigtx and publickey to signature
+		signature, err := txscript.NewScriptBuilder().AddData(sigB).AddData(pkB).Script()
+		if err != nil {
+			return nil, err
+		}
+		tx.TxIn[i].SignatureScript = signature
 	}
-
-	// call vault to sign tx
-	respSig, respPK, err := t.vaultClient.Sign("aetheras_btc_3", "btc", "testnet", "1", base58.Encode(hash))
-	if err != nil {
-		return nil, err
-	}
-
-	// getresponse and convert to bytes
-	sigB := base58.Decode(respSig)
-	pkB := base58.Decode(respPK)
-
-	// add sign hash
-	sigB = append(sigB, byte(txscript.SigHashAll))
-
-	// combine sigtx and publickey to signature
-	signature, err := txscript.NewScriptBuilder().AddData(sigB).AddData(pkB).Script()
-	if err != nil {
-		return nil, err
-	}
-	tx.TxIn[0].SignatureScript = signature
 	return tx, nil
 }
 

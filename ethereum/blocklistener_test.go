@@ -1,14 +1,15 @@
 package ethereum
 
 import (
+	"context"
 	"fmt"
 	"testing"
 )
 
-const nowBlock = 5581555
+const nowBlock = 5680385
 
 var addressBook = []string{
-	"0x1Ed2001e00Da365b0b589f5f15507982235B30D5",
+	"0x2035a145Fa186C408B0aF174E31F2D4C27054219",
 	"0x27bbe78C9FE77A0959b0Cf219cfADFEdB311462e",
 }
 
@@ -21,4 +22,23 @@ func TestBlockListener(t *testing.T) {
 	}
 	fmt.Println("address 1 Txs", txs[addressBook[0]])
 	fmt.Println("address 2 Txs", txs[addressBook[1]])
+}
+
+func TestContractListener(t *testing.T) {
+	ethRepo := NewEthClient()
+	ethRepo.blockRange = 10
+	_, err := ethRepo.GetContractRecord(testContractAddress, addressBook, nowBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestGetGasPrice(t *testing.T) {
+	ethRepo := NewEthClient()
+	ctx := context.Background()
+	gasprice, err := ethRepo.client.SuggestGasPrice(ctx)
+	fmt.Println(gasprice)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
