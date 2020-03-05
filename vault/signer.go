@@ -38,7 +38,7 @@ func (v *Vault) Sign(keyID, cointype, network, childIdx, message string) (string
 		"value":    message,
 	}
 	if cointype == "btc" {
-		sendReq["network"] = message
+		sendReq["network"] = network
 	}
 
 	// response
