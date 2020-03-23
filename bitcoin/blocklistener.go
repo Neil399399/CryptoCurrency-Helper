@@ -63,6 +63,7 @@ func (t *BtcTx) ListenBitcoinChain(addressBook []string, endBlockHeight int64) (
 							Time:          txRawResult.Time,
 							LockTime:      txRawResult.LockTime,
 							Blocktime:     txRawResult.Blocktime,
+							Memo:          out.ScriptPubKey.Asm, // comment
 						}
 						result[addr] = append(result[addr], voutDetail)
 					}

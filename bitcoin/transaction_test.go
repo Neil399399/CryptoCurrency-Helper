@@ -1,6 +1,7 @@
 package bitcoin
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/Neil399399/bitcoin-helper/vault"
@@ -24,11 +25,6 @@ func TestSendTransaction(t *testing.T) {
 	btcTx.txFee = txFee
 	btcTx.vaultClient = *vault
 
-	test, err := btcTx.client.GetNetworkInfo()
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	msgTx, unspentTx, err := btcTx.CreateTransaction(txids, fromAddr, toAddr, int64(239700000))
 	if err != nil {
 		t.Fatal(err)
@@ -48,4 +44,6 @@ func TestSendTransaction(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	fmt.Println("Transaction hash:", txhash.String())
 }

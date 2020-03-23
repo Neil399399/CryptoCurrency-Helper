@@ -13,6 +13,7 @@ type VoutDetail struct {
 	Time          int64
 	LockTime      uint32
 	Blocktime     int64
+	Memo          string
 }
 
 // Utxo is bitcoin Unspent Transaction Output

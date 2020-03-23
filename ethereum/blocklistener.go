@@ -64,6 +64,7 @@ func (e *EthTx) BlockListener(addressBook []string, endBlockHeight int64) (map[s
 							event.blockNumber = block.Number().Uint64()
 							event.timeStamp = strconv.FormatUint(block.Time(), 10)
 							event.erc = false
+							event.memo = string(txn.Data()) // comment
 							events[address] = append(events[address], event)
 						}
 					}

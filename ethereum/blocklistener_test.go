@@ -6,22 +6,22 @@ import (
 	"testing"
 )
 
-const nowBlock = 5680385
+const nowBlock = 6185472
 
+// target address
 var addressBook = []string{
-	"0x2035a145Fa186C408B0aF174E31F2D4C27054219",
-	"0x27bbe78C9FE77A0959b0Cf219cfADFEdB311462e",
+	"0xF0d65479732eedc406C00FFB29BC9dD426780eE4",
 }
 
+// listen target
 func TestBlockListener(t *testing.T) {
 	ethRepo := NewEthClient()
-	ethRepo.blockRange = 10
+	ethRepo.blockRange = 1
 	txs, err := ethRepo.BlockListener(addressBook, nowBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
 	fmt.Println("address 1 Txs", txs[addressBook[0]])
-	fmt.Println("address 2 Txs", txs[addressBook[1]])
 }
 
 func TestContractListener(t *testing.T) {

@@ -56,7 +56,7 @@ func TestGeneratePublicKey(t *testing.T) {
 		t.Fatal(err)
 	}
 	fmt.Println("Bitcoin address", btcAddr)
-	fmt.Println("Bitcoin address", ethAddr)
+	fmt.Println("Ethereum address", ethAddr)
 }
 
 func convertPublicToAddress(btcPublicKey, ethPublicKey, btcNetwork string) (string, string, error) {

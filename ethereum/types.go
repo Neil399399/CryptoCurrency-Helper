@@ -20,4 +20,5 @@ type TxDetail struct {
 	timeStamp   string
 	referenceID string
 	erc         bool
+	memo        string
 }

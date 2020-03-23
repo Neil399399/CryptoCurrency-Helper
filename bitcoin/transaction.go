@@ -119,6 +119,59 @@ func (t *BtcTx) CreateTransaction(txids []string, fromAddr string, toAddr string
 	return redemTx, unspentTx, nil
 }
 
+// CreateTransaction create a new bitcoin transaction (testnet)
+func (t *BtcTx) CreateTransactionWithMemo(txids []string, fromAddr string, toAddr string, amount int64, memo string) (*wire.MsgTx, Utxo, error) {
+	var redemTx *wire.MsgTx
+	redemTx = wire.NewMsgTx(wire.TxVersion)
+	var unspentTx Utxo
+	var total int64
+	amount = amount - t.txFee
+	for _, txid := range txids {
+		unspentAmount, outputIndex, err := t.getOutputIndex(txid, fromAddr)
+		if err != nil {
+			return nil, Utxo{}, err
+		}
+		total = total + unspentAmount
+		unspentTx = Utxo{
+			Address:     fromAddr,
+			TxID:        txid,
+			OutputIndex: outputIndex,
+			Script:      getPayToAddrScript(fromAddr),
+			Satoshis:    amount, // the amount we want to send
+		}
+
+		hash, err := chainhash.NewHashFromStr(unspentTx.TxID)
+		if err != nil {
+			return nil, Utxo{}, err
+		}
+
+		// Creste raw tx
+		outPoint := wire.NewOutPoint(hash, unspentTx.OutputIndex)
+		txIn := wire.NewTxIn(outPoint, nil, nil)
+		redemTx.AddTxIn(txIn)
+	}
+	// Create TxOut
+	rcvScript := getPayToAddrScript(toAddr)
+	outCoin := unspentTx.Satoshis
+	txOut := wire.NewTxOut(outCoin, rcvScript)
+	redemTx.AddTxOut(txOut)
+
+	// If the above TxOut leads to change, let the change flow back to sneder
+	change := total - unspentTx.Satoshis - t.txFee
+	if change > 0 {
+		changeScript := getPayToAddrScript(fromAddr)
+		changeTxOut := wire.NewTxOut(change, changeScript)
+		redemTx.AddTxOut(changeTxOut)
+	}
+
+	// add comment
+	pkScript, _ := txscript.NullDataScript([]byte(memo))
+	outputs := wire.NewTxOut(int64(0), pkScript)
+	redemTx.AddTxOut(outputs)
+
+	return redemTx, unspentTx, nil
+}
+
 // SignTransaction sign the transdaction with vault
 func (t *BtcTx) SignTransaction(tx *wire.MsgTx, unspentTx Utxo) (*wire.MsgTx, error) {
 	for i := 0; i < len(tx.TxIn); i++ {

@@ -79,13 +79,63 @@ func (e *EthTx) CreateTransaction(ctx context.Context, ERC20 bool, fromAddress, 
 	return newTxn, nil
 }
 
-func (e *EthTx) SignTransaction(ctx context.Context, tx *types.Transaction) (*types.Transaction, error) {
+func (e *EthTx) CreateTransactionWithMemo(ctx context.Context, ERC20 bool, fromAddress, toAddress string, value int64, memo string) (*types.Transaction, error) {
+	var newTxn *types.Transaction
+
+	nonce, err := e.client.PendingNonceAt(ctx, common.HexToAddress(fromAddress))
+	if err != nil {
+		return nil, err
+	}
+
+	gasPrice, err := e.client.SuggestGasPrice(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// set target address.
+	targetAddr := common.HexToAddress(toAddress)
+	valueBN := big.NewInt(value)
+	wei := big.NewInt(10)
+	demon := wei.Exp(wei, big.NewInt(18), nil)
+	valueBN.Mul(valueBN, demon)
+
+	gasLimit := e.gasLimit
+	fee := big.NewInt(0)
+	fee.Mul(gasPrice, big.NewInt(gasLimit))
+
+	// comment
+	memoB := []byte(memo)
+
+	if ERC20 {
+		amount := big.NewInt(value)
+		tokenAddress := common.HexToAddress(e.contractAddr)
+
+		transferFnSignature := []byte("transfer(address,uint256)")
+		hash := sha3.NewLegacyKeccak256()
+		hash.Write(transferFnSignature)
+		methodID := hash.Sum(nil)[:4]
+		paddedAddress := common.LeftPadBytes(targetAddr.Bytes(), 32)
+		paddedAmount := common.LeftPadBytes(amount.Bytes(), 32)
+		// save to byte array.
+		var data []byte
+		data = append(data, methodID...)
+		data = append(data, paddedAddress...)
+		data = append(data, paddedAmount...)
+
+		newTxn = types.NewTransaction(nonce, tokenAddress, big.NewInt(0), uint64(gasLimit), gasPrice, data)
+	} else {
+		newTxn = types.NewTransaction(nonce, targetAddr, valueBN, uint64(gasLimit), gasPrice, memoB)
+	}
+	return newTxn, nil
+}
+
+func (e *EthTx) SignTransaction(ctx context.Context, tx *types.Transaction, childIdx string) (*types.Transaction, error) {
 	chainID, err := e.client.NetworkID(ctx)
 	if err != nil {
 		return nil, err
 	}
 	hash := types.NewEIP155Signer(chainID).Hash(tx)
-	respSig, _, err := e.vaultClient.Sign("aetheras_eth_4", "eth", "", "70", base58.Encode(hash.Bytes()))
+	respSig, _, err := e.vaultClient.Sign("aetheras_eth_4", "eth", "", childIdx, base58.Encode(hash.Bytes()))
 	if err != nil {
 		return nil, err
 	}
