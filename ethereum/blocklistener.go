@@ -219,10 +219,10 @@ func parserBytes(txData []byte) (uint64, string, string, error) {
 		return 0, "", "", errors.New("method not match")
 	}
 	// 6~38 byte => paddedAddress
-	targetAddress := txData[6:38]
+	targetAddress := txData[4:36]
 	fmt.Println("targetAddress", common.BytesToAddress(targetAddress).Hex())
 	// 39~68 bytes => paddedAmount
-	Amount := txData[39:68]
+	Amount := txData[36:68]
 	value.SetBytes(Amount)
 	fmt.Println("Amount", value.Uint64())
 	// Memo
