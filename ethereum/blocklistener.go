@@ -119,11 +119,10 @@ func (e *EthTx) GetContractRecord(contractAddress string, addressBook []string, 
 			// match the address
 			sender := common.HexToAddress(vLog.Topics[1].Hex()).Hex()
 			receiver := common.HexToAddress(vLog.Topics[2].Hex()).Hex()
-			fmt.Println("sender", sender)
-			fmt.Println("receiver", receiver)
 
 			for _, address := range addressBook {
 				if receiver == address {
+					fmt.Println("vlog", common.Bytes2Hex(vLog.Data))
 					value.SetBytes(vLog.Data)
 					// set event
 					event.from = sender
@@ -134,13 +133,101 @@ func (e *EthTx) GetContractRecord(contractAddress string, addressBook []string, 
 					event.blockNumber = vLog.BlockNumber
 					// event.timeStamp = strconv.FormatUint(block.Time(), 10)
 					event.erc = true
+					event.memo = string(vLog.Data)
 					events = append(events, event)
 				}
 				continue
 			}
 		}
 	}
-
-	fmt.Println(events)
 	return events, nil
+}
+
+func (e *EthTx) ContractListenr(contractAddress string, addressBook []string, endBlockHeight int64) (map[string][]TxDetail, error) {
+	events := map[string][]TxDetail{}
+	ctx := context.Background()
+
+	// get latest block.
+	latestBlock, err := e.client.BlockByNumber(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// compares latestBlock and endBlock
+	lastestBlockNumber := int64(latestBlock.NumberU64())
+	if lastestBlockNumber < endBlockHeight {
+		return nil, errors.New("Block doesn't exist")
+	}
+
+	if lastestBlockNumber < e.blockRange {
+		return nil, errors.New("Block doesn't exist")
+	}
+
+	// get next block.
+	for num := 0; int64(num) < e.blockRange; num++ {
+		startBlock := endBlockHeight + int64(num)
+		if startBlock > lastestBlockNumber {
+			log.Println("WAITTING NEW BLOCK ...")
+			break
+		}
+		block, err := e.client.BlockByNumber(ctx, big.NewInt(startBlock))
+		if err != nil {
+			log.Println("GET BLOCK BY BLOCKNUMBER FAILED !", num)
+			continue
+		}
+		if block.Transactions().Len() > 0 {
+			for i, txn := range block.Transactions() {
+				sender, err := e.client.TransactionSender(ctx, txn, block.Hash(), uint(i))
+				if err != nil {
+					return nil, err
+				}
+				for _, address := range addressBook {
+					if to := txn.To(); to != nil {
+						if to.Hex() == contractAddress {
+							value, targetAddress, memo, err := parserBytes(txn.Data())
+							if err != nil {
+								return nil, err
+							}
+							// check target not the contract address.
+							event := TxDetail{}
+							event.from = sender.Hex()
+							event.to = targetAddress
+							event.txnHash = txn.Hash().Hex()
+							event.symbol = "wei"
+							event.value = value
+							event.blockNumber = block.Number().Uint64()
+							event.timeStamp = strconv.FormatUint(block.Time(), 10)
+							event.erc = false
+							event.memo = string(memo) // comment
+							events[address] = append(events[address], event)
+						}
+					}
+				}
+			}
+		}
+	}
+	return events, nil
+}
+
+func parserBytes(txData []byte) (uint64, string, string, error) {
+	value := big.NewInt(0)
+
+	// 0~5 byte => method
+	method := txData[:4]
+	// check method, a9059cbb -> transfer(address,uint256)
+	if common.Bytes2Hex(method) != "a9059cbb" {
+		return 0, "", "", errors.New("method not match")
+	}
+	// 6~38 byte => paddedAddress
+	targetAddress := txData[6:38]
+	fmt.Println("targetAddress", common.BytesToAddress(targetAddress).Hex())
+	// 39~68 bytes => paddedAmount
+	Amount := txData[39:68]
+	value.SetBytes(Amount)
+	fmt.Println("Amount", value.Uint64())
+	// Memo
+	Memo := txData[68:]
+	fmt.Println("Memo", string(Memo))
+
+	return value.Uint64(), common.BytesToAddress(targetAddress).Hex(), string(Memo), nil
 }

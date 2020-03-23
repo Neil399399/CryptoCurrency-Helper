@@ -122,6 +122,9 @@ func (e *EthTx) CreateTransactionWithMemo(ctx context.Context, ERC20 bool, fromA
 		data = append(data, paddedAddress...)
 		data = append(data, paddedAmount...)
 
+		// append comment
+		data = append(data, memoB...)
+
 		newTxn = types.NewTransaction(nonce, tokenAddress, big.NewInt(0), uint64(gasLimit), gasPrice, data)
 	} else {
 		newTxn = types.NewTransaction(nonce, targetAddr, valueBN, uint64(gasLimit), gasPrice, memoB)

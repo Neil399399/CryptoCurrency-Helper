@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-const nowBlock = 6185472
+const nowBlock = 6185540
 
 // target address
 var addressBook = []string{
@@ -27,10 +27,11 @@ func TestBlockListener(t *testing.T) {
 func TestContractListener(t *testing.T) {
 	ethRepo := NewEthClient()
 	ethRepo.blockRange = 10
-	_, err := ethRepo.GetContractRecord(testContractAddress, addressBook, nowBlock)
+	txs, err := ethRepo.ContractListenr(testContractAddress, addressBook, nowBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
+	fmt.Println("address 1 Txs", txs[addressBook[0]])
 }
 
 func TestGetGasPrice(t *testing.T) {
