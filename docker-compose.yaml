@@ -1,10 +1,11 @@
-version: '1'
+version: '3'
 
 networks:
   local:
 
 volumes:
   bitcoin-testnet:
+  omnicore:
 
 services:
     bitcoin-testnet:
@@ -18,3 +19,33 @@ services:
         volumes:
           - bitcoin-testnet:/bitcoin
         command: btc_oneshot --testnet -rpcallowip=0.0.0.0/0 -rpcbind=0.0.0.0 -rpcport=18332 -txindex=1
+    
+    vault: 
+        image: aetheras/vault:latest
+        container_name: vault
+        cap_add:
+          - IPC_LOCK
+        ports:
+          - 8200:8200
+        environment:
+          VAULT_CONFIG_DIR: /vault/config
+          VAULT_DEV_ROOT_TOKEN_ID: root
+          VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+          VAULT_ADDR: http://127.0.0.1:8200
+          PLUGIN_SHASUM: 9978be54aa3c02e79c5cd52f10c1f019ff9f5ecbf41bdff598e7bdd7dc96cf56
+        networks:
+          - local
+
+    omni-testnet:
+          image: neil/omnicore
+          container_name: omni-testnet
+          networks:
+            - local
+          volumes:
+            - omnicore:/home/bitcoin/.bitcoin
+          ports:
+            - 18332:18332
+            - 18333:18333
+            - 18443:18443
+            - 18444:18444
+          command: omnicored -testnet -server=1 -txindex=1 -rpcuser=user -rpcpassword=123456-rpcallowip=0.0.0.0/0 -printtoconsole

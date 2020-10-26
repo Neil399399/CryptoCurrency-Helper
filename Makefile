@@ -3,3 +3,21 @@ bitcoin-testnet:
 
 bitcoin-testnet-down:
 	docker stop bitcoin-testnet && docker rm bitcoin-testnet
+
+docker-omni:
+	docker build -t neil/omnicore:latest -f ./docker/dockerfile.omni .
+
+start-vault:
+	docker-compose -f deployment/docker-compose.yaml up -d vault; \
+	sleep 5;
+	./vault/init.sh ; \
+	./scripts/vault_dev_deploy.sh
+
+stop-vault:
+	docker stop vault && docker rm vault
+
+start-omni:
+	docker-compose -f docker-compose.yaml up -d omni-testnet;
+
+stop-omni:
+	docker stop omni-testnet && docker rm omni-testnet
