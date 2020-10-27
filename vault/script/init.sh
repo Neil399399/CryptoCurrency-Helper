@@ -1,6 +1,7 @@
 #!/bin/bash
 # This script is used to cleanly provision a new vault server
 export VAULT_ADDR=http://127.0.0.1:8200
+export PLUGIN_SHASUM=9978be54aa3c02e79c5cd52f10c1f019ff9f5ecbf41bdff598e7bdd7dc96cf56
 
 set -e
 echo "Vault Network: ${VAULT_ADDR}"

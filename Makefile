@@ -8,10 +8,10 @@ docker-omni:
 	docker build -t neil/omnicore:latest -f ./docker/dockerfile.omni .
 
 start-vault:
-	docker-compose -f deployment/docker-compose.yaml up -d vault; \
+	docker-compose -f docker-compose.yaml up -d vault; \
 	sleep 5;
-	./vault/init.sh ; \
-	./scripts/vault_dev_deploy.sh
+	./vault/script/init.sh ; \
+	./vault/script/deploy.sh
 
 stop-vault:
 	docker stop vault && docker rm vault
