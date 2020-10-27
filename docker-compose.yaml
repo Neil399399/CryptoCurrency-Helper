@@ -48,4 +48,4 @@ services:
             - 18333:18333
             - 18443:18443
             - 18444:18444
-          command: omnicored -testnet -server=1 -txindex=1 -rpcuser=user -rpcpassword=123456-rpcallowip=0.0.0.0/0 -printtoconsole
+          command: omnicored -testnet -server=1 -rpcuser=user -rpcpassword=123456 -rpcallowip=0.0.0.0/0 -rpcbind=0.0.0.0 -rpcport=18332
