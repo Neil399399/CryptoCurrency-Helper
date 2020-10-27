@@ -67,6 +67,18 @@ func (c *Client) GetBalance(address string, propertyId int32) (omnijson.OmniGetB
 	return result, err
 }
 
+func (c *Client) GetAllBalancesForAddress(address string) ([]omnijson.OmniGetAllBalancesForAddressResult, error) {
+	var results []omnijson.OmniGetAllBalancesForAddressResult
+	data, err := receive(c.do(omnijson.OmniGetAllBalancesForAddressCommand{
+		Address: address,
+	}))
+	if err != nil {
+		return results, err
+	}
+	err = json.Unmarshal(data, &results)
+	return results, err
+}
+
 func (c *Client) do(cmd command) chan *response {
 	body, err := marshalCmd(cmd)
 	if err != nil {
