@@ -2,23 +2,8 @@ package bitcoin
 
 import (
 	"errors"
-	"fmt"
 	"log"
 )
-
-func (t *BtcTx) GetBlock(currentBlockHeight int64) error {
-	currBlockHash, err := t.client.GetBlockHash(currentBlockHeight)
-	if err != nil {
-		return err
-	}
-
-	currBlock, err := t.client.GetBlock(currBlockHash)
-	if err != nil {
-		return err
-	}
-	log.Println(currBlock)
-	return nil
-}
 
 // ListenBitcoinChain get input address transcation from block
 func (t *BtcTx) ListenBitcoinChain(addressBook []string, endBlockHeight int64) (map[string][]VoutDetail, error) {
@@ -27,8 +12,8 @@ func (t *BtcTx) ListenBitcoinChain(addressBook []string, endBlockHeight int64) (
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("currentBlockHeight", currentBlockHeight)
-	fmt.Println("endBlockHeight", endBlockHeight)
+	log.Println("currentBlockHeight", currentBlockHeight)
+	log.Println("endBlockHeight", endBlockHeight)
 
 	// The genesis block coinbase is not considered an ordinary transaction
 	// and cannot be retrieved. So we should stop at 1st block.

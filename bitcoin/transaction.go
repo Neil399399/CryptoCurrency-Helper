@@ -15,34 +15,15 @@ import (
 type BtcTx struct {
 	client      *rpcclient.Client
 	txFee       int64
-	vaultClient vault.Vault
+	vaultClient *vault.Vault
 }
 
-// NewBtcClient new the rpc client
-func NewBtcClient() *BtcTx {
-	connCfg := &rpcclient.ConnConfig{
-		Host:         "localhost:18332",
-		User:         "user",
-		Pass:         "123456",
-		HTTPPostMode: true, // Bitcoin core only supports HTTP POST mode
-		DisableTLS:   true, // Bitcoin core does not provide TLS by default
-	}
-
-	client, err := rpcclient.New(connCfg, nil)
-	if err != nil {
-		panic("panic so sad")
-	}
+func NewTx(btcClient *rpcclient.Client, vaultClient *vault.Vault, txFee int64) *BtcTx {
 	return &BtcTx{
-		client: client,
+		client:      btcClient,
+		vaultClient: vaultClient,
+		txFee:       txFee,
 	}
-}
-
-func convertPublicToAddress(btcPublicKey string) (string, error) {
-	addrPub, err := btcutil.NewAddressPubKey(base58.Decode(btcPublicKey), &chaincfg.TestNet3Params)
-	if err != nil {
-		return "", err
-	}
-	return addrPub.EncodeAddress(), nil
 }
 
 func (t *BtcTx) getOutputIndex(txid string, addr string) (int64, uint32, error) {
@@ -63,12 +44,6 @@ func (t *BtcTx) getOutputIndex(txid string, addr string) (int64, uint32, error) 
 		}
 	}
 	return 0, 0, nil
-}
-
-func getPayToAddrScript(address string) []byte {
-	rcvAddress, _ := btcutil.DecodeAddress(address, &chaincfg.TestNet3Params)
-	rcvScript, _ := txscript.PayToAddrScript(rcvAddress)
-	return rcvScript
 }
 
 // CreateTransaction create a new bitcoin transaction (testnet)
@@ -225,4 +200,10 @@ func (t *BtcTx) SendTransaction(tx *wire.MsgTx) (*chainhash.Hash, error) {
 		return nil, err
 	}
 	return txhash, nil
+}
+
+func getPayToAddrScript(address string) []byte {
+	rcvAddress, _ := btcutil.DecodeAddress(address, &chaincfg.TestNet3Params)
+	rcvScript, _ := txscript.PayToAddrScript(rcvAddress)
+	return rcvScript
 }

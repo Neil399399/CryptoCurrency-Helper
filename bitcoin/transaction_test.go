@@ -7,9 +7,13 @@ import (
 	"github.com/Neil399399/bitcoin-helper/vault"
 )
 
-const toAddr = "moneyqMan7uh8FqdCA2BV5yZ8qVrc9ikLP"
-const fromAddr = "mnLPFNZbfNRJaFyZ71MEZ3L8xMaBaCP5di"
-const txFee = 10000
+const (
+	toAddr     = "moneyqMan7uh8FqdCA2BV5yZ8qVrc9ikLP"
+	fromAddr   = "mnLPFNZbfNRJaFyZ71MEZ3L8xMaBaCP5di"
+	vaultHost  = "http://localhost:8200"
+	vaultToken = "root"
+	txFee      = 10000
+)
 
 var txids = []string{
 	"b7d4cbb35a7fef7aefc07ec3bf2c4f0125144f9d89f1a7160174ff5a86943e8b",
@@ -19,11 +23,9 @@ var txids = []string{
 }
 
 func TestSendTransaction(t *testing.T) {
-	btcTx := NewBtcClient()
-	vault := vault.NewVaultClient("http://localhost:8200", "root")
-
-	btcTx.txFee = txFee
-	btcTx.vaultClient = *vault
+	client := NewBtcClient(HOST, LOGIN_ACC, LOGIN_PWD)
+	vault := vault.NewVaultClient(vaultHost, vaultToken)
+	btcTx := NewTx(client.httpClient, vault, txFee)
 
 	msgTx, unspentTx, err := btcTx.CreateTransaction(txids, fromAddr, toAddr, int64(100000000))
 	if err != nil {
