@@ -1,29 +1,30 @@
 package omni
 
 import (
-	"log"
 	"testing"
 )
 
 // config
-const HOST = "localhost:18332"
+const HOST = "35.234.25.4:30333"
 const LOGIN_ACC = "user"
 const LOGIN_PWD = "123456"
-const testAddress = "mnLPFNZbfNRJaFyZ71MEZ3L8xMaBaCP5di" // create by vault, childIdx=9000
+const testAddress_1 = "mnLPFNZbfNRJaFyZ71MEZ3L8xMaBaCP5di" // create by vault, childIdx=9000
+const testAddress_2 = "mtwX2rrT7kQRKdeDWs9U8aR7qRg4oR71Ap" // create by vault, childIdx=9001
 const testTxID = "7b28aab5b6c3dc5ea7003568879392a18034141a52f855ba2d57568850e1fc99"
 const OmniTokenId = 1     // omni token property id
-const TestOmniTokenId = 2 // test omni token property id
+const testOmniTokenId = 2 // test omni token property id
+const testPayload = "00000000000000020000000000989680"
 
-func TestNewClient(t *testing.T) {
+func TestGetInfo(t *testing.T) {
 	config := &ConnConfig{
 		Host: HOST,
 		User: LOGIN_ACC,
-		Pass: "123456",
+		Pass: LOGIN_PWD,
 	}
 	newClient := New(config)
 	resp, err := newClient.GetInfo()
 	if err != nil {
-		t.Fatal("get omni info failed", err)
+		t.Fatal("Get omni info failed, so sad", err)
 	}
 
 	t.Log("VersionInt:", resp.VersionInt)
@@ -43,9 +44,9 @@ func TestGetBalance(t *testing.T) {
 		Pass: LOGIN_PWD,
 	}
 	newClient := New(config)
-	resp, err := newClient.GetBalance(testAddress, OmniTokenId)
+	resp, err := newClient.GetBalance(testAddress_1, OmniTokenId)
 	if err != nil {
-		t.Fatal("get balance failed", err)
+		t.Fatal("Get balance failed, so sad", err)
 	}
 	t.Log("Balance:", resp.Balance)
 	t.Log("Reserved:", resp.Reserved)
@@ -59,9 +60,9 @@ func TestGetAllBalancesForAddress(t *testing.T) {
 		Pass: LOGIN_PWD,
 	}
 	newClient := New(config)
-	resp, err := newClient.GetAllBalancesForAddress("moneyqMan7uh8FqdCA2BV5yZ8qVrc9ikLP")
+	resp, err := newClient.GetAllBalancesForAddress(testAddress_1)
 	if err != nil {
-		t.Fatal("get balances by address failed", err)
+		t.Fatal("Get balances by address failed, so sad", err)
 	}
 
 	for i := 0; i < len(resp); i++ {
@@ -82,9 +83,9 @@ func TestGetListOfUnspent(t *testing.T) {
 		Pass: LOGIN_PWD,
 	}
 	newClient := New(config)
-	resp, err := newClient.ListUnSpent([]string{testAddress})
+	resp, err := newClient.ListUnSpent([]string{testAddress_1})
 	if err != nil {
-		t.Fatal("get list of unspent failed", err)
+		t.Fatal("Get list of unspent failed, so sad", err)
 	}
 
 	for i := 0; i < len(resp.Utxos); i++ {
@@ -112,7 +113,7 @@ func TestGetTransaction(t *testing.T) {
 	newClient := New(config)
 	resp, err := newClient.GetTransaction(testTxID)
 	if err != nil {
-		t.Fatal(err.Error())
+		t.Fatal("Get Transaction Failed, so sad", err.Error())
 	}
 	t.Log("----------------------------------------")
 	t.Log("TxID:", resp.TxID)
@@ -144,33 +145,36 @@ func TestCreateOpReturn(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	respB, err := newClient.CreateOpReturn("", "00000000000000020000000000989680")
+	respB, err := newClient.CreateOpReturn("", testPayload)
 	if err != nil {
-		t.Fatal(err.Error())
+		t.Fatal("Create OpReturn Failed, so sad", err.Error())
 	}
-	log.Println("OP_RETURN:", respB)
+	t.Log("OP_RETURN:", respB)
 }
 
-func TestSendTransaction(t *testing.T) {
+func TestCreateTransaction(t *testing.T) {
 	config := &ConnConfig{
 		Host: HOST,
 		User: LOGIN_ACC,
 		Pass: LOGIN_PWD,
 	}
 	newClient := New(config)
-	resp, err := newClient.SendTransaction("3M9qvHKtgARhqcMtM5cRT9VaiDJ5PSfQGY", "37FaKponF7zqoMLUjEiko25pDiuVH5YLEa", 1, "100")
+	amount := int64(10000000)
+	fee := int64(100000)
+	// create transaction
+	unSignTx, publicKeyScript, err := newClient.CreateTransaction(testAddress_1, testAddress_2, testOmniTokenId, amount, fee, testTxID)
 	if err != nil {
-		t.Fatal(err.Error())
+		t.Fatal("Create Transaction Failed, so sad", err)
 	}
-	log.Println(resp)
-}
-
-func TestCreateTransaction(t *testing.T) {
-	// config := &ConnConfig{
-	// 	Host: HOST,
-	// 	User: LOGIN_ACC,
-	// 	Pass: LOGIN_PWD,
-	// }
-	// newClient := New(config)
-	// newClient.CreateTransaction(testAddress, testAddress, TestOmniTokenId, 10000000, testTxID, 0)
+	// sign transaction
+	signedTx, err := newClient.SignTransaction(unSignTx, publicKeyScript)
+	if err != nil {
+		t.Fatal("Sign Transaction Failed, so sad", err)
+	}
+	// broadcasts raw transacrion
+	rawTxHash, err := newClient.SendRawTransaction(testAddress_1, testAddress_2, signedTx.TxHash().String())
+	if err != nil {
+		t.Fatal("Send Transaction Failed, so sad", err)
+	}
+	t.Log("rawTxHash", rawTxHash)
 }

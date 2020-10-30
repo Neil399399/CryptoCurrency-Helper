@@ -1,7 +1,6 @@
 package omni
 
 import (
-	"log"
 	"math/big"
 
 	"github.com/btcsuite/btcd/chaincfg"
@@ -101,13 +100,17 @@ func (c *Client) SignTransaction(redemTx *wire.MsgTx, scriptPubKey []byte) (*wir
 	return redemTx, nil
 }
 
-func (c *Client) SendRawTransaction() {
-
+func (c *Client) SendRawTransaction(from, to, tx string) (string, error) {
+	hash, err := c.SendRawTx(from, to, tx, from, "")
+	if err != nil {
+		return "", err
+	}
+	return string(hash), nil
 }
 
 func createPayload(propertyID, amount int64) []byte {
-	propertyIDHex := IntToHex(propertyID)
-	amountHex := IntToHex(amount)
+	propertyIDHex := intToHex(propertyID)
+	amountHex := intToHex(amount)
 	return []byte(OMNI_OP_CODE + propertyIDHex + amountHex)
 }
 
@@ -117,16 +120,7 @@ func getPayToAddrScript(address string) []byte {
 	return rcvScript
 }
 
-func IntToHex(value int64) string {
+func intToHex(value int64) string {
 	realValueB := common.LeftPadBytes(big.NewInt(value).Bytes(), 8)
 	return common.Bytes2Hex(realValueB)
-}
-
-func StrToHex(value string) string {
-	resp, err := chainhash.NewHashFromStr(value)
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-	log.Println(resp)
-	return common.Bytes2Hex([]byte(value))
 }
