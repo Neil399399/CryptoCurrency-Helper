@@ -26,7 +26,7 @@ func TestGeneratePublicKey(t *testing.T) {
 		"cointype": "btc",
 		"network":  "testnet",
 		"keyID":    btcMasterKeyRef,
-		"childIdx": "8776",
+		"childIdx": "9000",
 	}
 
 	ethData := map[string]interface{}{

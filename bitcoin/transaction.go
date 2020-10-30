@@ -21,9 +21,9 @@ type BtcTx struct {
 // NewBtcClient new the rpc client
 func NewBtcClient() *BtcTx {
 	connCfg := &rpcclient.ConnConfig{
-		Host:         "epona:18332",
-		User:         "bitcoinrpc",
-		Pass:         "l5MgAmLQLrJyafDs2QnQX6sQYzJSFrBrC42d60H34YcH",
+		Host:         "localhost:18332",
+		User:         "user",
+		Pass:         "123456",
 		HTTPPostMode: true, // Bitcoin core only supports HTTP POST mode
 		DisableTLS:   true, // Bitcoin core does not provide TLS by default
 	}
@@ -182,7 +182,7 @@ func (t *BtcTx) SignTransaction(tx *wire.MsgTx, unspentTx Utxo) (*wire.MsgTx, er
 			return nil, err
 		}
 		// call vault to sign tx
-		respSig, respPK, err := t.vaultClient.Sign("aetheras_btc_3", "btc", "testnet", "1", base58.Encode(hash))
+		respSig, respPK, err := t.vaultClient.Sign("aetheras_btc_4", "btc", "testnet", "9000", base58.Encode(hash))
 		if err != nil {
 			return nil, err
 		}

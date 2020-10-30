@@ -9,12 +9,14 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Neil399399/bitcoin-helper/omni/omnijson"
+	"github.com/Neil399399/bitcoin-helper/vault"
 )
 
 const (
 	contentType     = "Content-Type"
 	contentTypeJSON = "application/json"
+	vaultHost       = "http://localhost:8200"
+	vaultToken      = "root"
 )
 
 type Client struct {
@@ -22,61 +24,26 @@ type Client struct {
 	config       *ConnConfig
 	httpClient   *http.Client
 	sendPostChan chan *sendPostDetails
-
-	shutdown chan struct{}
-	done     chan struct{}
+	shutdown     chan struct{}
+	done         chan struct{}
+	vaultClient  vault.Vault
 }
 
 func New(config *ConnConfig) *Client {
 	httpClient := newHTTPClient()
-
+	vault := vault.NewVaultClient(vaultHost, vaultToken)
 	client := &Client{
 		config:       config,
 		httpClient:   httpClient,
 		sendPostChan: make(chan *sendPostDetails, sendPostBufferSize),
-
-		shutdown: make(chan struct{}, 1),
-		done:     make(chan struct{}, 1),
+		shutdown:     make(chan struct{}, 1),
+		done:         make(chan struct{}, 1),
+		vaultClient:  *vault,
 	}
 
 	go client.sendPostHandler()
 
 	return client
-}
-
-func (c *Client) GetInfo() (omnijson.OmniGetInfoResult, error) {
-	var result omnijson.OmniGetInfoResult
-	data, err := receive(c.do(omnijson.OmniGetInfoCommand{}))
-	if err != nil {
-		return result, err
-	}
-	err = json.Unmarshal(data, &result)
-	return result, err
-}
-
-func (c *Client) GetBalance(address string, propertyId int32) (omnijson.OmniGetBalanceResult, error) {
-	var result omnijson.OmniGetBalanceResult
-	data, err := receive(c.do(omnijson.OmniGetBalanceCommand{
-		Address:    address,
-		PropertyID: propertyId,
-	}))
-	if err != nil {
-		return result, err
-	}
-	err = json.Unmarshal(data, &result)
-	return result, err
-}
-
-func (c *Client) GetAllBalancesForAddress(address string) ([]omnijson.OmniGetAllBalancesForAddressResult, error) {
-	var results []omnijson.OmniGetAllBalancesForAddressResult
-	data, err := receive(c.do(omnijson.OmniGetAllBalancesForAddressCommand{
-		Address: address,
-	}))
-	if err != nil {
-		return results, err
-	}
-	err = json.Unmarshal(data, &results)
-	return results, err
 }
 
 func (c *Client) do(cmd command) chan *response {

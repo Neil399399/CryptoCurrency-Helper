@@ -11,7 +11,7 @@ package omnijson
 //   ...
 // ]
 
-type OmniGetAllBalancesForAddressResult = struct {
+type OmniGetAllBalancesForAddressResult = []struct {
 	PropertyId int64
 	Name       string
 	Balance    string

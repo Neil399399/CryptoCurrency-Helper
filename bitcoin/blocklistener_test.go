@@ -7,7 +7,7 @@ import (
 
 var testAddressBook = []string{"munZ5L7fE8Hmiqvc2f3ze9Wo1TjBXfACxR", "mvN8gFRPEwwt8XBpwr7gkFgDCPNMhtNyXA"}
 
-const nowBlockNumber = 1611901
+const nowBlockNumber = 1344887
 
 func TestBlockListener(t *testing.T) {
 	btcTx := NewBtcClient()
@@ -20,4 +20,9 @@ func TestBlockListener(t *testing.T) {
 	//scan
 	fmt.Println("address 1 transactions", events[testAddressBook[0]])
 	fmt.Println("address 2 transactions", events[testAddressBook[1]])
+}
+
+func TestGetBlock(t *testing.T) {
+	btcTx := NewBtcClient()
+	btcTx.GetBlock(nowBlockNumber)
 }
