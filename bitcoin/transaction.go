@@ -11,6 +11,8 @@ import (
 	"github.com/btcsuite/btcutil/base58"
 )
 
+const OMNI_OP_CODE = "6f6d6e69"
+
 // BtcTx is bttcoin transaction repo
 type BtcTx struct {
 	client      *rpcclient.Client
@@ -18,7 +20,7 @@ type BtcTx struct {
 	vaultClient *vault.Vault
 }
 
-func NewTx(btcClient *rpcclient.Client, vaultClient *vault.Vault, txFee int64) *BtcTx {
+func BtcTxClient(btcClient *rpcclient.Client, vaultClient *vault.Vault, txFee int64) *BtcTx {
 	return &BtcTx{
 		client:      btcClient,
 		vaultClient: vaultClient,
@@ -47,16 +49,15 @@ func (t *BtcTx) getOutputIndex(txid string, addr string) (int64, uint32, error) 
 }
 
 // CreateTransaction create a new bitcoin transaction (testnet)
-func (t *BtcTx) CreateTransaction(txids []string, fromAddr string, toAddr string, amount int64) (*wire.MsgTx, Utxo, error) {
+func (t *BtcTx) CreateTransaction(txids []string, fromAddr string, toAddr string, amount int64) (*wire.MsgTx, []byte, error) {
 	var redemTx *wire.MsgTx
 	redemTx = wire.NewMsgTx(wire.TxVersion)
 	var unspentTx Utxo
 	var total int64
-	amount = amount - t.txFee
 	for _, txid := range txids {
 		unspentAmount, outputIndex, err := t.getOutputIndex(txid, fromAddr)
 		if err != nil {
-			return nil, Utxo{}, err
+			return nil, nil, err
 		}
 		total = total + unspentAmount
 		unspentTx = Utxo{
@@ -64,12 +65,11 @@ func (t *BtcTx) CreateTransaction(txids []string, fromAddr string, toAddr string
 			TxID:        txid,
 			OutputIndex: outputIndex,
 			Script:      getPayToAddrScript(fromAddr),
-			Satoshis:    amount, // the amount we want to send
 		}
 
 		hash, err := chainhash.NewHashFromStr(unspentTx.TxID)
 		if err != nil {
-			return nil, Utxo{}, err
+			return nil, nil, err
 		}
 
 		// Creste raw tx
@@ -79,32 +79,31 @@ func (t *BtcTx) CreateTransaction(txids []string, fromAddr string, toAddr string
 	}
 	// Create TxOut
 	rcvScript := getPayToAddrScript(toAddr)
-	outCoin := unspentTx.Satoshis
+	outCoin := amount
 	txOut := wire.NewTxOut(outCoin, rcvScript)
 	redemTx.AddTxOut(txOut)
 
 	// If the above TxOut leads to change, let the change flow back to sneder
-	change := total - unspentTx.Satoshis - t.txFee
+	change := total - amount - t.txFee
 	if change > 0 {
 		changeScript := getPayToAddrScript(fromAddr)
 		changeTxOut := wire.NewTxOut(change, changeScript)
 		redemTx.AddTxOut(changeTxOut)
 	}
 
-	return redemTx, unspentTx, nil
+	return redemTx, nil, nil
 }
 
 // CreateTransaction create a new bitcoin transaction (testnet)
-func (t *BtcTx) CreateTransactionWithMemo(txids []string, fromAddr string, toAddr string, amount int64, memo string) (*wire.MsgTx, Utxo, error) {
+func (t *BtcTx) CreateTransactionWithMemo(txids []string, fromAddr string, toAddr string, amount int64, memo string) (*wire.MsgTx, []byte, error) {
 	var redemTx *wire.MsgTx
 	redemTx = wire.NewMsgTx(wire.TxVersion)
 	var unspentTx Utxo
 	var total int64
-	amount = amount - t.txFee
 	for _, txid := range txids {
 		unspentAmount, outputIndex, err := t.getOutputIndex(txid, fromAddr)
 		if err != nil {
-			return nil, Utxo{}, err
+			return nil, nil, err
 		}
 		total = total + unspentAmount
 		unspentTx = Utxo{
@@ -112,12 +111,11 @@ func (t *BtcTx) CreateTransactionWithMemo(txids []string, fromAddr string, toAdd
 			TxID:        txid,
 			OutputIndex: outputIndex,
 			Script:      getPayToAddrScript(fromAddr),
-			Satoshis:    amount, // the amount we want to send
 		}
 
 		hash, err := chainhash.NewHashFromStr(unspentTx.TxID)
 		if err != nil {
-			return nil, Utxo{}, err
+			return nil, nil, err
 		}
 
 		// Creste raw tx
@@ -127,12 +125,12 @@ func (t *BtcTx) CreateTransactionWithMemo(txids []string, fromAddr string, toAdd
 	}
 	// Create TxOut
 	rcvScript := getPayToAddrScript(toAddr)
-	outCoin := unspentTx.Satoshis
+	outCoin := amount
 	txOut := wire.NewTxOut(outCoin, rcvScript)
 	redemTx.AddTxOut(txOut)
 
 	// If the above TxOut leads to change, let the change flow back to sneder
-	change := total - unspentTx.Satoshis - t.txFee
+	change := total - amount - t.txFee
 	if change > 0 {
 		changeScript := getPayToAddrScript(fromAddr)
 		changeTxOut := wire.NewTxOut(change, changeScript)
@@ -144,20 +142,20 @@ func (t *BtcTx) CreateTransactionWithMemo(txids []string, fromAddr string, toAdd
 	outputs := wire.NewTxOut(int64(0), pkScript)
 	redemTx.AddTxOut(outputs)
 
-	return redemTx, unspentTx, nil
+	return redemTx, unspentTx.Script, nil
 }
 
 // SignTransaction sign the transdaction with vault
-func (t *BtcTx) SignTransaction(tx *wire.MsgTx, unspentTx Utxo) (*wire.MsgTx, error) {
+func (t *BtcTx) SignTransaction(tx *wire.MsgTx, script []byte, signInfo SignInfo) (*wire.MsgTx, error) {
 	for i := 0; i < len(tx.TxIn); i++ {
 
 		// hash transaction
-		hash, err := txscript.CalcSignatureHash(unspentTx.Script, txscript.SigHashAll, tx, i)
+		hash, err := txscript.CalcSignatureHash(script, txscript.SigHashAll, tx, i)
 		if err != nil {
 			return nil, err
 		}
 		// call vault to sign tx
-		respSig, respPK, err := t.vaultClient.Sign("aetheras_btc_4", "btc", "testnet", "9000", base58.Encode(hash))
+		respSig, respPK, err := t.vaultClient.Sign(signInfo.KeyID, signInfo.CoinType, signInfo.Network, signInfo.ChildIdx, base58.Encode(hash))
 		if err != nil {
 			return nil, err
 		}
@@ -180,9 +178,9 @@ func (t *BtcTx) SignTransaction(tx *wire.MsgTx, unspentTx Utxo) (*wire.MsgTx, er
 }
 
 // ValidateTranscation check the transaction is valid
-func (t *BtcTx) ValidateTranscation(tx *wire.MsgTx, unspentTx Utxo) error {
+func (t *BtcTx) ValidateTranscation(tx *wire.MsgTx, Script []byte, amount int64) error {
 	flags := txscript.StandardVerifyFlags
-	vm, err := txscript.NewEngine(unspentTx.Script, tx, 0, flags, nil, nil, unspentTx.Satoshis) // Set to 0 because we only have one input
+	vm, err := txscript.NewEngine(Script, tx, 0, flags, nil, nil, amount) // Set to 0 because we only have one input
 	if err != nil {
 		return err
 	}

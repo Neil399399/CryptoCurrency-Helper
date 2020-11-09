@@ -24,3 +24,11 @@ type Utxo struct {
 	Script      []byte
 	Satoshis    int64
 }
+
+// SignInfo information of sign key
+type SignInfo struct {
+	CoinType string
+	Network  string
+	KeyID    string
+	ChildIdx string
+}

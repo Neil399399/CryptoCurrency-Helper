@@ -14,7 +14,7 @@ const nowBlockNumber = 1344887
 func TestBlockListener(t *testing.T) {
 	client := NewBtcClient(HOST, LOGIN_ACC, LOGIN_PWD)
 	vault := vault.NewVaultClient(vaultHost, vaultToken)
-	btcTx := NewTx(client.httpClient, vault, txFee)
+	btcTx := BtcTxClient(client.HttpClient, vault, txFee)
 
 	events, err := btcTx.ListenBitcoinChain(testAddressBook, nowBlockNumber-5)
 	if err != nil {

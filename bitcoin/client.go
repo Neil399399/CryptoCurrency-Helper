@@ -9,8 +9,8 @@ import (
 )
 
 type Client struct {
-	httpClient  *rpcclient.Client
-	vaultClient vault.Vault
+	HttpClient  *rpcclient.Client
+	VaultClient vault.Vault
 }
 
 // NewBtcClient new the rpc client
@@ -28,17 +28,17 @@ func NewBtcClient(host, user, password string) *Client {
 		panic("create new client failed, so sad")
 	}
 	return &Client{
-		httpClient: client,
+		HttpClient: client,
 	}
 }
 
 func (c *Client) GetBlock(currentBlockHeight int64) (*wire.MsgBlock, error) {
-	currBlockHash, err := c.httpClient.GetBlockHash(currentBlockHeight)
+	currBlockHash, err := c.HttpClient.GetBlockHash(currentBlockHeight)
 	if err != nil {
 		return nil, err
 	}
 
-	currBlock, err := c.httpClient.GetBlock(currBlockHash)
+	currBlock, err := c.HttpClient.GetBlock(currBlockHash)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func (c *Client) GetBlock(currentBlockHeight int64) (*wire.MsgBlock, error) {
 }
 
 func (c *Client) GetBalance(address string) (string, error) {
-	accBalance, err := c.httpClient.GetBalance(address)
+	accBalance, err := c.HttpClient.GetBalance(address)
 	if err != nil {
 		return "", err
 	}
@@ -58,7 +58,7 @@ func (c *Client) GetTransaction(txhash string) (*btcjson.GetTransactionResult, e
 	if err != nil {
 		return nil, err
 	}
-	transacation, err := c.httpClient.GetTransaction(hash)
+	transacation, err := c.HttpClient.GetTransaction(hash)
 	if err != nil {
 		return nil, err
 	}
