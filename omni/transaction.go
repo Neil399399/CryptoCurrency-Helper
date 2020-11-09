@@ -3,12 +3,12 @@ package omni
 import (
 	"math/big"
 
+	"github.com/Neil399399/bitcoin-helper/bitcoin"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
-	"github.com/btcsuite/btcutil/base58"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -25,93 +25,74 @@ type Utxo struct {
 	TxID        string
 	OutputIndex uint32
 	Script      []byte
-	Satoshis    int64
 }
 
-func (c *Client) CreateTransaction(from, to string, propertyID int64, amount int64, fee int64, feeAddress string) (*wire.MsgTx, []byte, error) {
-	// get address unspent txid
-	unspentTx, err := c.ListUnSpent([]string{from})
-	if err != nil {
-		return nil, nil, err
-	}
-	// create tx input (omni_createrawtx_input)
+func (c *Client) CreateOmniTransaction(txids []TxID, fromAddr string, toAddr string, propertyID, amount int64) (*wire.MsgTx, []byte, error) {
 	var redemTx *wire.MsgTx
 	redemTx = wire.NewMsgTx(wire.TxVersion)
-	for _, utxo := range unspentTx.Utxos {
-		hash, err := chainhash.NewHashFromStr(utxo.Tx)
+	var unspentTx Utxo
+	var total int64
+	for _, txid := range txids {
+		total = total + txid.Balance
+		unspentTx = Utxo{
+			Address:     fromAddr,
+			TxID:        txid.TxID,
+			OutputIndex: txid.OutputIndex,
+			Script:      getPayToAddrScript(fromAddr),
+		}
+
+		hash, err := chainhash.NewHashFromStr(unspentTx.TxID)
 		if err != nil {
 			return nil, nil, err
 		}
-		outPoint := wire.NewOutPoint(hash, uint32(utxo.Vout))
+
+		// Create raw tx
+		outPoint := wire.NewOutPoint(hash, unspentTx.OutputIndex)
 		txIn := wire.NewTxIn(outPoint, nil, nil)
 		redemTx.AddTxIn(txIn)
 	}
+	// Create TxOut
+	rcvScript := getPayToAddrScript(toAddr)
+	txOut := wire.NewTxOut(0, rcvScript)
+	redemTx.AddTxOut(txOut)
 
-	// create tx opreturn (omni_createrawtx_opreturn)
+	// Create tx opreturn (omni_createrawtx_opreturn)
 	payload := createPayload(propertyID, amount)
 	pkScript, err := txscript.NullDataScript(payload)
 	if err != nil {
 		return nil, nil, err
 	}
-	outputs := wire.NewTxOut(int64(0), pkScript)
+	outputs := wire.NewTxOut(0, pkScript)
 	redemTx.AddTxOut(outputs)
 
-	// add reference (omni_createrawtx_reference)
-	rcvScript := getPayToAddrScript(to)
-	txOut := wire.NewTxOut(0, rcvScript)
-	redemTx.AddTxOut(txOut)
-
-	// create tx change (omni_createrawtx_change)
-	changeScript := getPayToAddrScript(feeAddress)
-	changeTxOut := wire.NewTxOut(fee, changeScript)
-	redemTx.AddTxOut(changeTxOut)
-
-	return redemTx, getPayToAddrScript(from), nil
+	// If the above TxOut leads to change, let the change flow back to sneder
+	change := total - c.config.BitcoinNetFee
+	if change > 0 {
+		changeScript := getPayToAddrScript(fromAddr)
+		changeTxOut := wire.NewTxOut(change, changeScript)
+		redemTx.AddTxOut(changeTxOut)
+	}
+	return redemTx, unspentTx.Script, nil
 }
 
-func (c *Client) SignTransaction(redemTx *wire.MsgTx, scriptPubKey []byte) (*wire.MsgTx, error) {
-	// SignTransaction sign the transdaction with vault
-	for index, txIn := range redemTx.TxIn {
-		// hash transaction
-		hash, err := txscript.CalcSignatureHash(scriptPubKey, txscript.SigHashAll, redemTx, index)
-		if err != nil {
-			return nil, err
-		}
-		// call vault to sign tx
-		respSig, respPK, err := c.vaultClient.Sign(VAULT_KEYID, VAULT_COINTYPE, VAULT_NETWORK, VAULT_CHILDIDX, base58.Encode(hash))
-		if err != nil {
-			return nil, err
-		}
-
-		// get response and convert to bytes
-		sigB := base58.Decode(respSig)
-		pkB := base58.Decode(respPK)
-
-		// add sign hash
-		sigB = append(sigB, byte(txscript.SigHashAll))
-
-		// combine sigtx and publickey to signature
-		signature, err := txscript.NewScriptBuilder().AddData(sigB).AddData(pkB).Script()
-		if err != nil {
-			return nil, err
-		}
-		txIn.SignatureScript = signature
-	}
-	return redemTx, nil
+func (c *Client) SignTransaction(redemTx *wire.MsgTx, scriptPubKey []byte, signInfo bitcoin.SignInfo) (*wire.MsgTx, error) {
+	return c.btcTxClient.SignTransaction(redemTx, scriptPubKey, signInfo)
 }
 
-func (c *Client) SendRawTransaction(from, to, tx string) (string, error) {
-	hash, err := c.SendRawTx(from, to, tx, from, "")
-	if err != nil {
-		return "", err
-	}
-	return string(hash), nil
+// ValidateTranscation check the transaction is valid
+func (c *Client) ValidateTranscation(tx *wire.MsgTx, script []byte) error {
+	return c.btcTxClient.ValidateTranscation(tx, script, 0)
+}
+
+// SendTransaction send the transaction by bitcoin client
+func (c *Client) SendOmniTransaction(tx *wire.MsgTx) (*chainhash.Hash, error) {
+	return c.btcTxClient.SendTransaction(tx)
 }
 
 func createPayload(propertyID, amount int64) []byte {
 	propertyIDHex := intToHex(propertyID)
 	amountHex := intToHex(amount)
-	return []byte(OMNI_OP_CODE + propertyIDHex + amountHex)
+	return common.Hex2Bytes(OMNI_OP_CODE + propertyIDHex + amountHex)
 }
 
 func getPayToAddrScript(address string) []byte {

@@ -96,6 +96,7 @@ type ConnConfig struct {
 	DisableAutoReconnect bool
 	DisableConnectOnNew  bool
 	EnableBCInfoHacks    bool
+	BitcoinNetFee        int64
 }
 
 type rpcError struct {
@@ -151,4 +152,10 @@ type rpcRequest struct {
 	Method  string            `json:"method"`
 	Params  []json.RawMessage `json:"params"`
 	ID      string            `json:"id"`
+}
+
+type TxID struct {
+	TxID        string
+	OutputIndex uint32
+	Balance     int64
 }

@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/Neil399399/bitcoin-helper/bitcoin"
 	"github.com/Neil399399/bitcoin-helper/vault"
 )
 
@@ -27,11 +28,13 @@ type Client struct {
 	shutdown     chan struct{}
 	done         chan struct{}
 	vaultClient  vault.Vault
+	btcTxClient  bitcoin.BtcTx
 }
 
 func New(config *ConnConfig) *Client {
 	httpClient := newHTTPClient()
 	vault := vault.NewVaultClient(vaultHost, vaultToken)
+	btcClient := bitcoin.NewBtcClient(config.Host, config.User, config.Pass)
 	client := &Client{
 		config:       config,
 		httpClient:   httpClient,
@@ -39,6 +42,7 @@ func New(config *ConnConfig) *Client {
 		shutdown:     make(chan struct{}, 1),
 		done:         make(chan struct{}, 1),
 		vaultClient:  *vault,
+		btcTxClient:  *bitcoin.BtcTxClient(btcClient.HttpClient, vault, config.BitcoinNetFee),
 	}
 
 	go client.sendPostHandler()

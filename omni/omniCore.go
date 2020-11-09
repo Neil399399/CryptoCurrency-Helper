@@ -30,6 +30,18 @@ func (c *Client) GetBalance(address string, propertyId int32) (omnijson.OmniGetB
 	return result, err
 }
 
+func (c *Client) GetAddressTxids(addresses []string) ([]omnijson.OmniAddressTxidsResult, error) {
+	var result []omnijson.OmniAddressTxidsResult
+	data, err := receive(c.do(omnijson.OmniAddressTxidsCommand{
+		Addresses: addresses,
+	}))
+	if err != nil {
+		return result, err
+	}
+	err = json.Unmarshal(data, &result)
+	return result, err
+}
+
 func (c *Client) GetAllBalancesForAddress(address string) (omnijson.OmniGetAllBalancesForAddressResult, error) {
 	var result omnijson.OmniGetAllBalancesForAddressResult
 	data, err := receive(c.do(omnijson.OmniGetAllBalancesForAddressCommand{

@@ -2,6 +2,8 @@ package omni
 
 import (
 	"testing"
+
+	"github.com/Neil399399/bitcoin-helper/bitcoin"
 )
 
 // config
@@ -10,8 +12,8 @@ const LOGIN_ACC = "user"
 const LOGIN_PWD = "123456"
 const testAddress_1 = "mnLPFNZbfNRJaFyZ71MEZ3L8xMaBaCP5di" // create by vault, childIdx=9000
 const testAddress_2 = "mtwX2rrT7kQRKdeDWs9U8aR7qRg4oR71Ap" // create by vault, childIdx=9001
-const testTxID = "7b28aab5b6c3dc5ea7003568879392a18034141a52f855ba2d57568850e1fc99"
-const OmniTokenId = 1     // omni token property id
+const omniToken_address = "moneyqMan7uh8FqdCA2BV5yZ8qVrc9ikLP"
+const OmniTokenId = 1
 const testOmniTokenId = 2 // test omni token property id
 const testPayload = "00000000000000020000000000989680"
 
@@ -60,7 +62,7 @@ func TestGetAllBalancesForAddress(t *testing.T) {
 		Pass: LOGIN_PWD,
 	}
 	newClient := New(config)
-	resp, err := newClient.GetAllBalancesForAddress(testAddress_1)
+	resp, err := newClient.GetAllBalancesForAddress(testAddress_2)
 	if err != nil {
 		t.Fatal("Get balances by address failed, so sad", err)
 	}
@@ -76,33 +78,47 @@ func TestGetAllBalancesForAddress(t *testing.T) {
 	}
 }
 
-func TestGetListOfUnspent(t *testing.T) {
-	config := &ConnConfig{
-		Host: HOST,
-		User: LOGIN_ACC,
-		Pass: LOGIN_PWD,
-	}
-	newClient := New(config)
-	resp, err := newClient.ListUnSpent([]string{testAddress_1})
-	if err != nil {
-		t.Fatal("Get list of unspent failed, so sad", err)
-	}
+// func TestGetAddressTxids(t *testing.T) {
+// 	config := &ConnConfig{
+// 		Host: HOST,
+// 		User: LOGIN_ACC,
+// 		Pass: LOGIN_PWD,
+// 	}
+// 	newClient := New(config)
+// 	resp, err := newClient.GetAddressTxids([]string{testAddress_1})
+// 	if err != nil {
+// 		t.Fatal("Get address txids failed, so sad", err)
+// 	}
+// 	t.Log("Txids:", resp)
+// }
 
-	for i := 0; i < len(resp.Utxos); i++ {
-		each := resp.Utxos[i]
-		t.Log("Address:", each.Address)
-		t.Log("Tx:", each.Tx)
-		t.Log("OutputIndex:", each.OutputIndex)
-		t.Log("Script:", each.Script)
-		t.Log("Satoshis:", each.Satoshis)
-		t.Log("Height:", each.Height)
-		t.Log("Vout:", each.Vout)
-		t.Log("Coinbase:", each.Coinbase)
-		t.Log("----------------------------------------")
-	}
-	t.Log("Hash:", resp.Hash)
-	t.Log("Height:", resp.Height)
-}
+// func TestGetListOfUnspent(t *testing.T) {
+// 	config := &ConnConfig{
+// 		Host: HOST,
+// 		User: LOGIN_ACC,
+// 		Pass: LOGIN_PWD,
+// 	}
+// 	newClient := New(config)
+// 	resp, err := newClient.ListUnSpent([]string{testAddress_1})
+// 	if err != nil {
+// 		t.Fatal("Get list of unspent failed, so sad", err)
+// 	}
+
+// 	for i := 0; i < len(resp.Utxos); i++ {
+// 		each := resp.Utxos[i]
+// 		t.Log("Address:", each.Address)
+// 		t.Log("Tx:", each.Tx)
+// 		t.Log("OutputIndex:", each.OutputIndex)
+// 		t.Log("Script:", each.Script)
+// 		t.Log("Satoshis:", each.Satoshis)
+// 		t.Log("Height:", each.Height)
+// 		t.Log("Vout:", each.Vout)
+// 		t.Log("Coinbase:", each.Coinbase)
+// 		t.Log("----------------------------------------")
+// 	}
+// 	t.Log("Hash:", resp.Hash)
+// 	t.Log("Height:", resp.Height)
+// }
 
 func TestGetTransaction(t *testing.T) {
 	config := &ConnConfig{
@@ -111,6 +127,7 @@ func TestGetTransaction(t *testing.T) {
 		Pass: LOGIN_PWD,
 	}
 	newClient := New(config)
+	const testTxID = "4c26bdaabfe737348f9b06ad21fc27abe4a92e34812ca5a080297353ad75968d"
 	resp, err := newClient.GetTransaction(testTxID)
 	if err != nil {
 		t.Fatal("Get Transaction Failed, so sad", err.Error())
@@ -141,10 +158,6 @@ func TestCreateOpReturn(t *testing.T) {
 		Pass: LOGIN_PWD,
 	}
 	newClient := New(config)
-	_, err := newClient.CreateRawTxInput("", testTxID, 0)
-	if err != nil {
-		t.Fatal(err.Error())
-	}
 	respB, err := newClient.CreateOpReturn("", testPayload)
 	if err != nil {
 		t.Fatal("Create OpReturn Failed, so sad", err.Error())
@@ -152,27 +165,52 @@ func TestCreateOpReturn(t *testing.T) {
 	t.Log("OP_RETURN:", respB)
 }
 
-func TestCreateTransaction(t *testing.T) {
+func TestSendTransaction(t *testing.T) {
 	config := &ConnConfig{
-		Host: HOST,
-		User: LOGIN_ACC,
-		Pass: LOGIN_PWD,
+		Host:          HOST,
+		User:          LOGIN_ACC,
+		Pass:          LOGIN_PWD,
+		BitcoinNetFee: 10000,
 	}
 	newClient := New(config)
-	amount := int64(10000000)
-	fee := int64(100000)
+	amount := int64(20000000)
+	SignKey := bitcoin.SignInfo{
+		CoinType: "btc",
+		Network:  "testnet",
+		KeyID:    "aetheras_btc_4",
+		ChildIdx: "9001",
+	}
+
+	txIds := []TxID{
+		{
+			TxID:        "ff3a48d43c95794f70510c99e35acf9618d81a024d58145d9acd761eea9a764a",
+			OutputIndex: 1,
+			Balance:     5000000,
+		},
+	}
+
 	// create transaction
-	unSignTx, publicKeyScript, err := newClient.CreateTransaction(testAddress_1, testAddress_2, testOmniTokenId, amount, fee, testTxID)
+	unSignTx, publicKeyScript, err := newClient.CreateOmniTransaction(txIds, testAddress_2, testAddress_1, testOmniTokenId, amount)
 	if err != nil {
 		t.Fatal("Create Transaction Failed, so sad", err)
 	}
+	t.Log("unSignTx", unSignTx)
+
 	// sign transaction
-	signedTx, err := newClient.SignTransaction(unSignTx, publicKeyScript)
+	signedTx, err := newClient.SignTransaction(unSignTx, publicKeyScript, SignKey)
 	if err != nil {
 		t.Fatal("Sign Transaction Failed, so sad", err)
 	}
-	// broadcasts raw transacrion
-	rawTxHash, err := newClient.SendRawTransaction(testAddress_1, testAddress_2, signedTx.TxHash().String())
+	t.Log("signed hash", signedTx.TxHash().String())
+
+	// validate transaction
+	err = newClient.ValidateTranscation(signedTx, publicKeyScript)
+	if err != nil {
+		t.Fatal("Validate Transaction Failed, so sad", err)
+	}
+
+	// send transacrion
+	rawTxHash, err := newClient.SendOmniTransaction(signedTx)
 	if err != nil {
 		t.Fatal("Send Transaction Failed, so sad", err)
 	}
