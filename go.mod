@@ -7,6 +7,8 @@ require (
 	github.com/btcsuite/btcd v0.21.0-beta
 	github.com/btcsuite/btcutil v1.0.2
 	github.com/btcsuite/btcwallet/walletdb v1.1.0
+	github.com/cosmos/cosmos-sdk v0.39.1
+	github.com/cosmos/go-bip39 v0.0.0-20180819234021-555e2067c45d
 	github.com/ethereum/go-ethereum v1.9.9
 	github.com/hashicorp/vault/api v1.0.4
 	github.com/ibclabs/omnilayer-go v0.0.1
