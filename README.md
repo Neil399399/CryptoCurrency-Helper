@@ -1,2 +1,2 @@
-# BitCoin Helper
-Block Listener and Transaction tools for bitcoin testnet and omni.
+# Crypto Currency Helper
+Implement bitcoin,ethereum and omni rpc call and transaction tools.
